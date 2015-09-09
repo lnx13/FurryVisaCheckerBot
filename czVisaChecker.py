@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 __author__ = 'AinonLynx'
 
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-import telegram
 import sqlite3
+
+from selenium import webdriver
+from selenium.webdriver.support.ui import Select
+import telegram
 
 
 class VisaChecker():
@@ -21,13 +20,14 @@ class VisaChecker():
         c.execute("CREATE TABLE IF NOT EXISTS chats (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, chatId, city, lastState, UNIQUE(chatId, city))")
         self.conn.commit()
 
-    def sendDoge(self, chatId):
+    def send_doge(self, chatId):
         """Doge easter egg"""
-        self.bot.sendPhoto(chat_id=chatId,photo='https://upload.wikimedia.org/wikipedia/ru/5/5f/Original_Doge_meme.jpg')
+        # self.bot.sendPhoto(chat_id=chatId,photo='https://upload.wikimedia.org/wikipedia/ru/5/5f/Original_Doge_meme.jpg')
+        self.bot.sendSticker(chat_id=chatId,sticker='BQADAgAD3gAD9HsZAAFphGBFqImfGAI')
         self.bot.sendMessage(chat_id=chatId, text="Such doge, so wow, many visas!")
 
     def message_parse(self, msg, chatId):
-        """Parce received message and execute command"""
+        """Parse received message and execute command"""
         c = self.conn.cursor()
 
         if "/subscribe" in msg:
@@ -78,8 +78,7 @@ class VisaChecker():
                     if code == 0:
                        self.bot.sendMessage(chat_id=chatId, text=message)
         elif "wow" in msg:
-            self.sendDoge(chatId)
-
+            self.send_doge(chatId)
 
     def get_messages(self):
         """Get all bot messages"""
