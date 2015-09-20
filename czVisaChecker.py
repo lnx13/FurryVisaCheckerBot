@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 __author__ = 'AinonLynx'
 
 from selenium import webdriver
@@ -21,13 +22,13 @@ class VisaChecker():
         c.execute("CREATE TABLE IF NOT EXISTS chats (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, chatId, city, lastState, UNIQUE(chatId, city))")
         self.conn.commit()
 
-    def sendDoge(self, chatId):
+    def send_doge(self, chatId):
         """Doge easter egg"""
         self.bot.sendPhoto(chat_id=chatId,photo='https://upload.wikimedia.org/wikipedia/ru/5/5f/Original_Doge_meme.jpg')
         self.bot.sendMessage(chat_id=chatId, text="Such doge, so wow, many visas!")
 
     def message_parse(self, msg, chatId):
-        """Parce received message and execute command"""
+        """Parse received message and execute command"""
         c = self.conn.cursor()
 
         if "/subscribe" in msg:
@@ -78,22 +79,68 @@ class VisaChecker():
                     if code == 0:
                        self.bot.sendMessage(chat_id=chatId, text=message)
         elif "wow" in msg:
-            self.sendDoge(chatId)
+            self.send_doge(chatId)
 
+        elif "/track" in msg:
+            try:
+                ref_num = msg.split(" ")[1]
+                birthday = msg.split(" ")[2]
+            except IndexError:
+                self.bot.sendMessage(chat_id=chatId, text="Example: /track refNumber birthday_dd/mm/yyyy")
+                return
+
+            code, message = self.track_visa(ref_num, birthday)
+            if code == 0:
+                self.bot.sendMessage(chat_id=chatId, text=message)
+            else:
+                self.bot.sendMessage(chat_id=chatId, text="Track error :(")
 
     def get_messages(self):
         """Get all bot messages"""
         updates = self.bot.getUpdates()
         try:
-            lastUpdateId = updates[-1].update_id
+            last_update_id = updates[-1].update_id
         except IndexError:
-            lastUpdateId = 0
-        self.bot.getUpdates(offset=(lastUpdateId+1)) # make all messages read
-        print "last update id: " + str(lastUpdateId)
+            last_update_id = 0
+        self.bot.getUpdates(offset=(last_update_id+1)) # make all messages read
+        print "last update id: " + str(last_update_id)
         for u in updates:
             self.message_parse(u.message.text, u.message.chat_id)
         print "updates checked"
         print [u.message.text for u in updates]
+
+
+    def track_visa(self, ref_number, birthday):
+        """Track visa application status"""
+        try:
+            browser = webdriver.Firefox()
+            browser.get('https://www.vfsvisaonline.com/czech-onlinetracking/')
+            assert 'Tracking' in browser.title
+            browser.implicitly_wait(2)
+            browser.find_element_by_id('ContentMain_txtgwfNumber').send_keys(ref_number)
+            browser.find_element_by_id('ContentMain_txtDOB').send_keys(birthday)
+            browser.implicitly_wait(2)
+            browser.find_element_by_id('ContentMain_btnSubmit').click()
+            browser.implicitly_wait(2)
+            text = browser.find_element_by_id('ContentMain_lblTrackingMessage').text
+            browser.quit()
+            print text.encode("UTF-8")
+            try:
+                eng_text = text.split("\n")[0]  # get english message
+            except IndexError:
+                eng_text = "String split error, try again"
+
+            msg = "Ref number: " + ref_number + "\n" + eng_text
+            return (0, msg)
+        except Exception, e:
+            # browser.save_screenshot('screen.png')
+            print e
+            try:
+                browser.quit()
+            except:
+                pass
+            return (-1, str(e))
+
 
     def check_visa(self, city):
         """Checks free slots in visa application center
