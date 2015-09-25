@@ -14,6 +14,7 @@ class VisaChecker():
 
     def __init__(self, token, db="visaChecker.db"):
         """Init telegram bot and sqlite database"""
+        self.browser = webdriver.Firefox()
         self.results = {}
         self.bot = telegram.Bot(token=token)
         self.conn = sqlite3.connect(db)
@@ -109,21 +110,18 @@ class VisaChecker():
         print "updates checked"
         print [u.message.text for u in updates]
 
-
     def track_visa(self, ref_number, birthday):
         """Track visa application status"""
         try:
-            browser = webdriver.Firefox()
-            browser.get('https://www.vfsvisaonline.com/czech-onlinetracking/')
-            assert 'Tracking' in browser.title
-            browser.implicitly_wait(2)
-            browser.find_element_by_id('ContentMain_txtgwfNumber').send_keys(ref_number)
-            browser.find_element_by_id('ContentMain_txtDOB').send_keys(birthday)
-            browser.implicitly_wait(2)
-            browser.find_element_by_id('ContentMain_btnSubmit').click()
-            browser.implicitly_wait(2)
-            text = browser.find_element_by_id('ContentMain_lblTrackingMessage').text
-            browser.quit()
+            self.browser.get('https://www.vfsvisaonline.com/czech-onlinetracking/')
+            assert 'Tracking' in self.browser.title
+            self.browser.implicitly_wait(2)
+            self.browser.find_element_by_id('ContentMain_txtgwfNumber').send_keys(ref_number)
+            self.browser.find_element_by_id('ContentMain_txtDOB').send_keys(birthday)
+            self.browser.implicitly_wait(2)
+            self.browser.find_element_by_id('ContentMain_btnSubmit').click()
+            self.browser.implicitly_wait(2)
+            text = self.browser.find_element_by_id('ContentMain_lblTrackingMessage').text
             print text.encode("UTF-8")
             try:
                 eng_text = text.split("\n")[0]  # get english message
@@ -135,10 +133,6 @@ class VisaChecker():
         except Exception, e:
             # browser.save_screenshot('screen.png')
             print e
-            try:
-                browser.quit()
-            except:
-                pass
             return (-1, str(e))
 
 
@@ -153,23 +147,21 @@ class VisaChecker():
             return self.results[city]
 
         try:
-            browser = webdriver.Firefox()
-            browser.get('http://www.vfsglobal.com/czechrepublic/ukraine/english/Schedule_an_appointment.html')
-            assert 'Visa' in browser.title
+            self.browser.get('http://www.vfsglobal.com/czechrepublic/ukraine/english/Schedule_an_appointment.html')
+            assert 'Visa' in self.browser.title
 
-            iframe = browser.find_elements_by_tag_name('iframe')[0]
-            browser.switch_to_frame(iframe)
-            browser.implicitly_wait(2)
-            browser.find_element_by_link_text('Schedule Appointment').click()
+            iframe = self.browser.find_elements_by_tag_name('iframe')[0]
+            self.browser.switch_to_frame(iframe)
+            self.browser.implicitly_wait(2)
+            self.browser.find_element_by_link_text('Schedule Appointment').click()
 
-            Select(browser.find_element_by_id('ctl00_plhMain_cboVAC')).select_by_visible_text(city)
-            browser.find_element_by_id('ctl00_plhMain_btnSubmit').click()
-            browser.implicitly_wait(2)
-            Select(browser.find_element_by_id('ctl00_plhMain_cboVisaCategory')).select_by_visible_text('Tourism')
-            browser.implicitly_wait(2)
-            ps = browser.page_source
-            text = browser.find_element_by_id('ctl00_plhMain_lblMsg').text
-            browser.quit()
+            Select(self.browser.find_element_by_id('ctl00_plhMain_cboVAC')).select_by_visible_text(city)
+            self.browser.find_element_by_id('ctl00_plhMain_btnSubmit').click()
+            self.browser.implicitly_wait(2)
+            Select(self.browser.find_element_by_id('ctl00_plhMain_cboVisaCategory')).select_by_visible_text('Tourism')
+            self.browser.implicitly_wait(2)
+            ps = self.browser.page_source
+            text = self.browser.find_element_by_id('ctl00_plhMain_lblMsg').text
             if "No date" in ps:
                 res = (0, "No dates in " + city)
                 self.results[city] = res
@@ -184,10 +176,6 @@ class VisaChecker():
         except Exception, e:
             # browser.save_screenshot('screen.png')
             print e
-            try:
-                browser.quit()
-            except:
-                pass
             return (-1, str(e))
 
 
@@ -205,5 +193,6 @@ def main():
                 c.execute("UPDATE chats SET lastState=? WHERE city=? AND chatId=?", (msg, city, chatId))
                 check.conn.commit()
     check.conn.close()
+    check.browser.quit()
 
 main()
