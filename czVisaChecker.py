@@ -14,7 +14,7 @@ class VisaChecker():
 
     def __init__(self, token, db="visaChecker.db"):
         """Init telegram bot and sqlite database"""
-        self.browser = webdriver.Firefox()
+        self.browser = None
         self.results = {}
         self.bot = telegram.Bot(token=token)
         self.conn = sqlite3.connect(db)
@@ -113,6 +113,8 @@ class VisaChecker():
     def track_visa(self, ref_number, birthday):
         """Track visa application status"""
         try:
+            if self.browser == None:
+                self.browser = webdriver.Firefox()
             self.browser.get('https://www.vfsvisaonline.com/czech-onlinetracking/')
             assert 'Tracking' in self.browser.title
             self.browser.implicitly_wait(2)
@@ -147,6 +149,8 @@ class VisaChecker():
             return self.results[city]
 
         try:
+            if self.browser == None:
+                self.browser = webdriver.Firefox()
             self.browser.get('http://www.vfsglobal.com/czechrepublic/ukraine/english/Schedule_an_appointment.html')
             assert 'Visa' in self.browser.title
 
@@ -193,6 +197,7 @@ def main():
                 c.execute("UPDATE chats SET lastState=? WHERE city=? AND chatId=?", (msg, city, chatId))
                 check.conn.commit()
     check.conn.close()
-    check.browser.quit()
+    if check.browser != None:
+        check.browser.quit()
 
 main()
